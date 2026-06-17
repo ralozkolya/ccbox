@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+#
+# ccbox — run Claude Code in a rootless podman container.
+#
+#   ccbox build          Build the image.
+#   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
+#   ccbox [shell]        Run Claude Code (default) or a bash shell against $PWD.
+#
+# Host boundary (req #3): the ONLY host bind mount is the current directory.
+# All credentials live in the named volume "ccbox-home", never on the host.
+#
+# Platform access: set CCBOX_NET to your platform's podman network (e.g.
+# "<compose-project>_default") to join it and reach services by name.
+#
+set -euo pipefail
+
+IMAGE="${CCBOX_IMAGE:-ccbox:latest}"
+VOLUME="${CCBOX_VOLUME:-ccbox-home}"
+NET="${CCBOX_NET:-podman}"   # default rootless network = outbound only
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+engine() {
+  command -v podman >/dev/null || { echo "podman not found" >&2; exit 1; }
+}
+
+# Shared run flags. Only $PWD crosses the host boundary; the home volume is
+# podman-managed storage, not a host path.
+run_flags() {
+  # Pin the host user to container uid/gid 1000 (the "node" user) regardless
+  # of the host's own uid, so files written into the workspace stay owned by
+  # you on any machine.
+  printf '%s\n' \
+    --rm -it \
+    --userns=keep-id:uid=1000,gid=1000 \
+    --network "$NET" \
+    -v "$PWD":/workspace:Z \
+    -v "$VOLUME":/home/node \
+    -w /workspace
+}
+
+cmd_help() {
+  cat <<'EOF'
+ccbox — run Claude Code in a rootless podman container.
+
+Usage:
+  ccbox build          Build the image.
+  ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
+  ccbox [run] [args]   Run Claude Code (default). Extra args pass to claude.
+  ccbox shell          Open a bash shell against $PWD.
+  ccbox help           Show this help.
+
+Environment:
+  CCBOX_IMAGE   Image tag         (default: ccbox:latest)
+  CCBOX_VOLUME  Home volume name  (default: ccbox-home)
+  CCBOX_NET     Podman network    (default: podman)
+
+Only the current directory is bind-mounted; credentials live in the
+named volume "$CCBOX_VOLUME", never on the host.
+EOF
+}
+
+cmd_build() {
+  engine
+  podman build -t "$IMAGE" "$HERE"
+}
+
+# First-run setup: drop into a shell with guidance, register the MCP server,
+# and generate a dedicated SSH key inside the volume if missing.
+cmd_auth() {
+  engine
+  mapfile -t FLAGS < <(run_flags)
+  podman run "${FLAGS[@]}" "$IMAGE" bash -lc '
+    set -e
+
+    # Register the Atlassian remote MCP server (idempotent).
+    if ! claude mcp list 2>/dev/null | grep -q "^atlassian"; then
+      claude mcp add-json --scope user atlassian "$(cat /etc/ccbox/mcp-atlassian.json)" || true
+    fi
+
+    # Dedicated SSH key in the persisted volume — host ~/.ssh is never used.
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    if [ ! -f ~/.ssh/id_ed25519 ]; then
+      ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "ccbox-agent"
+      [ -f ~/.ssh/config ] || printf "Host *\n  AddKeysToAgent yes\n" > ~/.ssh/config
+      chmod 600 ~/.ssh/config
+    fi
+
+    echo
+    echo "=== ccbox first-run setup ==="
+    echo "Run these once; everything persists in the ccbox-home volume:"
+    echo "  gh auth login"
+    echo "  gcloud auth login --no-launch-browser"
+    echo "  claude            # sign in to your subscription, then /exit"
+    echo "  (run any Atlassian query in claude once to complete its OAuth)"
+    echo
+    echo "Add this SSH public key to GitHub / your git hosts:"
+    echo "-----------------------------------------------------------------"
+    cat ~/.ssh/id_ed25519.pub
+    echo "-----------------------------------------------------------------"
+    echo
+    exec bash -l
+  '
+}
+
+cmd_run() {
+  engine
+  mapfile -t FLAGS < <(run_flags)
+  podman run "${FLAGS[@]}" "$IMAGE" claude "$@"
+}
+
+cmd_shell() {
+  engine
+  mapfile -t FLAGS < <(run_flags)
+  podman run "${FLAGS[@]}" "$IMAGE" bash -l
+}
+
+case "${1:-run}" in
+  build)            shift; cmd_build "$@" ;;
+  auth)             shift; cmd_auth "$@" ;;
+  shell)            shift; cmd_shell "$@" ;;
+  run)              shift; cmd_run "$@" ;;
+  help|-h|--help)   cmd_help ;;
+  *)                cmd_run "$@" ;;   # treat unknown args as claude args
+esac
