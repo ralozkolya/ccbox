@@ -95,6 +95,38 @@ remain reachable.
 | `CCBOX_IMAGE` | `ccbox:latest` | image tag |
 | `CCBOX_VOLUME` | `ccbox-home` | credentials volume name |
 
+## Git worktrees
+
+A linked worktree records its link to the main repo by path. On the host that
+path is the repo's real location; in the container the repo is mounted at
+`/workspace` — two different paths for the same checkout, which is what breaks
+worktrees created on one side and used on the other.
+
+ccbox handles this by **building git from source (≥ 2.48) and defaulting to
+`worktree.useRelativePaths`**, so a worktree created inside the container
+records its links *relative* to the repo. The same checkout then resolves both
+in the container and on the host. The preference lives in the container's
+system git config only — never written to your home volume or to any repo, so
+the preference itself never leaks across the bind mount.
+
+**Your host git must also be ≥ 2.48.** Creating a relative worktree permanently
+marks the repo: git writes `extensions.relativeWorktrees` into
+`<repo>/.git/config` and bumps `core.repositoryformatversion` to `1`. That file
+lives in the bind-mounted checkout, so the marking is visible on the host too. A
+host git that predates the extension then **refuses every command on the repo** —
+`git status`, `log`, `commit`, `push`, and libgit2-backed editors (VS Code,
+JetBrains) all fail with `fatal: unknown repository extension found:
+relativeworktrees`. Many common hosts ship older git (Ubuntu 22.04 → 2.34,
+Debian 12 → 2.39, Debian 13 → 2.47, Apple/Xcode git ≈ 2.39), so check
+`git --version` on the host before using this. The marker is sticky and outlives
+the worktrees; undo it with `git config --unset extensions.relativeWorktrees`
+run from the repo.
+
+One rule: **launch ccbox from the main repo root, not from inside a worktree
+directory.** That mounts the repo — including worktrees nested under it, such as
+`.claude/worktrees/<name>` — as a unit at `/workspace`, so the relative links
+resolve. Claude can then create and enter worktrees during the session.
+
 ## Host boundary (what crosses it)
 
 - `$PWD` → `/workspace` (`:Z`) — the one bind mount.

@@ -28,6 +28,12 @@ engine() {
 
 # Shared run flags. Only $PWD crosses the host boundary; the home volume is
 # podman-managed storage, not a host path.
+#
+# Git worktrees: launch ccbox from the main repo root (not from inside a
+# worktree dir) so the repo — including worktrees nested under it, e.g.
+# .claude/worktrees/<name> — is mounted as a unit at /workspace. The bundled
+# git defaults to worktree.useRelativePaths, so worktrees created in the
+# container record relative links and resolve both here and on the host.
 run_flags() {
   # Pin the host user to container uid/gid 1000 (the "node" user) regardless
   # of the host's own uid, so files written into the workspace stay owned by
