@@ -20,7 +20,7 @@ any access to your host beyond the directory you launch it from.
 | `Containerfile` | Image: Node 24 + Claude Code + base tools |
 | `install-tools.sh` | **The seam for adding tools** — one function per tool |
 | `mcp-atlassian.json` | Atlassian remote MCP server definition |
-| `ccbox` | Launcher: `build` / `auth` / `shell` / `help` / run |
+| `ccbox` | Launcher: `build` / `auth` / `auto` / `shell` / `help` / run |
 
 ## Quick start
 
@@ -36,6 +36,20 @@ Put `ccbox` on your PATH for convenience (a write to your own bin dir):
 ```bash
 ln -s "$PWD/ccbox" ~/.local/bin/ccbox
 ```
+
+## Auto mode (`./ccbox auto`)
+
+Launches Claude Code with `--permission-mode auto` — the same auto-accept mode
+you reach by cycling permission modes with shift+tab, but on from the start:
+
+```bash
+cd ~/your/project
+ccbox auto             # run with permission mode set to auto
+ccbox auto [args]      # extra args pass through to claude
+```
+
+Because the container only ever sees the directory you launch it from, the
+agent can act freely without reaching anything else on your host.
 
 ## First-run auth (`./ccbox auth`)
 

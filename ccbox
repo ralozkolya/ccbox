@@ -5,6 +5,7 @@
 #   ccbox build          Build the image.
 #   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
 #   ccbox [run]          Run Claude Code (default).
+#   ccbox auto           Run Claude Code in auto mode (--permission-mode auto).
 #   ccbox shell          Run a bash shell against $PWD.
 #   ccbox help           Show usage (run `ccbox help` for full details).
 #
@@ -48,6 +49,8 @@ Usage:
   ccbox build          Build the image.
   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
   ccbox [run] [args]   Run Claude Code (default). Extra args pass to claude.
+  ccbox auto [args]    Run Claude Code in auto mode (--permission-mode auto).
+                       Extra args pass to claude.
   ccbox shell          Open a bash shell against $PWD.
   ccbox help           Show this help.
 
@@ -110,6 +113,12 @@ cmd_run() {
   podman run "${FLAGS[@]}" "$IMAGE" claude "$@"
 }
 
+cmd_auto() {
+  engine
+  mapfile -t FLAGS < <(run_flags)
+  podman run "${FLAGS[@]}" "$IMAGE" claude --permission-mode auto "$@"
+}
+
 cmd_shell() {
   engine
   mapfile -t FLAGS < <(run_flags)
@@ -119,6 +128,7 @@ cmd_shell() {
 case "${1:-run}" in
   build)            shift; cmd_build "$@" ;;
   auth)             shift; cmd_auth "$@" ;;
+  auto)             shift; cmd_auto "$@" ;;
   shell)            shift; cmd_shell "$@" ;;
   run)              shift; cmd_run "$@" ;;
   help|-h|--help)   cmd_help ;;
