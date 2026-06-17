@@ -4,7 +4,9 @@
 #
 #   ccbox build          Build the image.
 #   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
-#   ccbox [shell]        Run Claude Code (default) or a bash shell against $PWD.
+#   ccbox [run]          Run Claude Code (default).
+#   ccbox shell          Run a bash shell against $PWD.
+#   ccbox help           Show usage (run `ccbox help` for full details).
 #
 # Host boundary (req #3): the ONLY host bind mount is the current directory.
 # All credentials live in the named volume "ccbox-home", never on the host.
@@ -55,7 +57,7 @@ Environment:
   CCBOX_NET     Podman network    (default: podman)
 
 Only the current directory is bind-mounted; credentials live in the
-named volume "$CCBOX_VOLUME", never on the host.
+named volume (default "ccbox-home"), never on the host.
 EOF
 }
 

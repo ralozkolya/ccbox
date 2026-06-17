@@ -20,7 +20,7 @@ any access to your host beyond the directory you launch it from.
 | `Containerfile` | Image: Node 24 + Claude Code + base tools |
 | `install-tools.sh` | **The seam for adding tools** — one function per tool |
 | `mcp-atlassian.json` | Atlassian remote MCP server definition |
-| `ccbox` | Launcher: `build` / `auth` / `shell` / run |
+| `ccbox` | Launcher: `build` / `auth` / `shell` / `help` / run |
 
 ## Quick start
 
