@@ -39,8 +39,10 @@ ln -s "$PWD/ccbox" ~/.local/bin/ccbox
 
 ## Auto mode (`./ccbox auto`)
 
-Launches Claude Code with `--permission-mode auto` — the same auto-accept mode
-you reach by cycling permission modes with shift+tab, but on from the start:
+Launches Claude Code with `--permission-mode auto` — actions run autonomously,
+gated by background safety checks instead of per-action prompts. This is broader
+than the `acceptEdits` mode you reach by cycling with shift+tab (which only
+auto-accepts file edits), so reach for it deliberately:
 
 ```bash
 cd ~/your/project
@@ -105,7 +107,10 @@ worktrees created on one side and used on the other.
 ccbox handles this by **building git from source (≥ 2.48) and defaulting to
 `worktree.useRelativePaths`**, so a worktree created inside the container
 records its links *relative* to the repo. The same checkout then resolves both
-in the container and on the host. The preference lives in the container's
+in the container and on the host. This only covers worktrees **created inside
+the container**: one you made on the *host* with ordinary git records *absolute*
+links to the host path, which don't exist at `/workspace`, so make worktrees
+from inside ccbox, not on the host. The preference lives in the container's
 system git config only — never written to your home volume or to any repo, so
 the preference itself never leaks across the bind mount.
 

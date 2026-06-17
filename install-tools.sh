@@ -44,13 +44,13 @@ install_base() {
 install_git() {
   apt_update_once
   local ver="2.51.0"
-  local build_deps="build-essential libssl-dev libcurl4-openssl-dev libexpat1-dev zlib1g-dev"
-  local make_flags="NO_TCLTK=YesPlease NO_GETTEXT=YesPlease NO_PERL=YesPlease NO_PYTHON=YesPlease"
+  local build_deps="build-essential libssl-dev libcurl4-openssl-dev libexpat1-dev zlib1g-dev libpcre2-dev"
+  local make_flags="USE_LIBPCRE=YesPlease NO_TCLTK=YesPlease NO_GETTEXT=YesPlease NO_PERL=YesPlease NO_PYTHON=YesPlease"
 
   apt-get install -y --no-install-recommends $build_deps
   # Runtime libs the built binary needs; installed explicitly (marked manual)
   # so the build-deps purge below cannot autoremove them out from under git.
-  apt-get install -y --no-install-recommends libcurl4 libexpat1 zlib1g
+  apt-get install -y --no-install-recommends libcurl4 libexpat1 zlib1g libpcre2-8-0
 
   local src; src="$(mktemp -d)"
   curl -fsSL "https://mirrors.edge.kernel.org/pub/software/scm/git/git-${ver}.tar.gz" \
