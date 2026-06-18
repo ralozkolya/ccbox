@@ -10,8 +10,10 @@ any access to your host beyond the directory you launch it from.
   directory. All credentials are created *inside* the container and persist in
   a named podman volume (`ccbox-home`); your host config dirs and `~/.ssh` are
   never exposed.
-- **Rootless + SELinux-aware.** Runs as a non-root user, with `:Z` relabeling
-  and `--userns=keep-id` so files you create in the workspace stay owned by you.
+- **Rootless + SELinux-aware.** Runs as a non-root user, with `:z` shared
+  relabeling and `--userns=keep-id` so files you create in the workspace stay
+  owned by you — and so concurrent instances on the same repo don't fight over
+  the SELinux label.
 
 ## Files
 
@@ -134,7 +136,7 @@ resolve. Claude can then create and enter worktrees during the session.
 
 ## Host boundary (what crosses it)
 
-- `$PWD` → `/workspace` (`:Z`) — the one bind mount.
+- `$PWD` → `/workspace` (`:z`, shared SELinux label) — the one bind mount.
 - `ccbox-home` named volume — podman-managed, not a host path.
 - Shared podman network (when `CCBOX_NET` is set) + outbound network.
 - Nothing else: no host config dirs, no `~/.ssh`, no podman/Docker socket,

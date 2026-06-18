@@ -38,11 +38,18 @@ run_flags() {
   # Pin the host user to container uid/gid 1000 (the "node" user) regardless
   # of the host's own uid, so files written into the workspace stay owned by
   # you on any machine.
+  #
+  # The workspace uses :z (shared SELinux label), not :Z (private). Under
+  # enforcing SELinux, :Z relabels the workspace with a per-container MCS
+  # category pair that's exclusive to one container; a second ccbox mounting
+  # the same tree (or a nested worktree) relabels it again, and the first
+  # instance loses access to its own workspace. :z applies a shared label so
+  # concurrent instances on the same repo can coexist.
   printf '%s\n' \
     --rm -it \
     --userns=keep-id:uid=1000,gid=1000 \
     --network "$NET" \
-    -v "$PWD":/workspace:Z \
+    -v "$PWD":/workspace:z \
     -v "$VOLUME":/home/node \
     -w /workspace
 }
