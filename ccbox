@@ -2,7 +2,7 @@
 #
 # ccbox — run Claude Code in a rootless podman container.
 #
-#   ccbox build          Build the image.
+#   ccbox build          Build the image (pass --no-cache to bypass the cache).
 #   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
 #   ccbox [run]          Run Claude Code (default).
 #   ccbox auto           Run Claude Code in auto mode (--permission-mode auto).
@@ -59,7 +59,8 @@ cmd_help() {
 ccbox — run Claude Code in a rootless podman container.
 
 Usage:
-  ccbox build          Build the image.
+  ccbox build [args]   Build the image. Extra args pass to `podman build`,
+                       e.g. `ccbox build --no-cache` to bypass the layer cache.
   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
   ccbox [run] [args]   Run Claude Code (default). Extra args pass to claude.
   ccbox auto [args]    Run Claude Code in auto mode (--permission-mode auto).
@@ -79,7 +80,9 @@ EOF
 
 cmd_build() {
   engine
-  podman build -t "$IMAGE" "$HERE"
+  # Extra args pass through to `podman build`, e.g. `ccbox build --no-cache`
+  # to bypass the layer cache for a clean rebuild.
+  podman build "$@" -t "$IMAGE" "$HERE"
 }
 
 # First-run setup: drop into a shell with guidance, register the MCP server,

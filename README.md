@@ -27,7 +27,7 @@ any access to your host beyond the directory you launch it from.
 ## Quick start
 
 ```bash
-./ccbox build          # build the image
+./ccbox build          # build the image (add --no-cache for a clean rebuild)
 ./ccbox auth           # one-time logins (see below)
 cd ~/your/project
 /path/to/ccbox          # launch Claude Code against this dir
