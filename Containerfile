@@ -5,6 +5,11 @@
 
 FROM node:24-bookworm-slim
 
+# --- timezone -------------------------------------------------------------
+# Set before the tools install so every build step runs on Tbilisi local time.
+# install-tools.sh installs tzdata and points /etc/localtime at this zone.
+ENV TZ=Asia/Tbilisi
+
 # --- base tools (git, ssh, gh, gcloud, ...) -------------------------------
 # install-tools.sh is the single seam for extending the toolset.
 COPY install-tools.sh /tmp/install-tools.sh

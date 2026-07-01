@@ -31,7 +31,14 @@ install_base() {
     jq \
     ripgrep \
     less \
-    netcat-openbsd
+    netcat-openbsd \
+    tzdata
+
+  # Point the clock at the requested zone now (TZ is exported in the
+  # Containerfile) so every later build step runs on local time.
+  local tz="${TZ:-Asia/Tbilisi}"
+  ln -snf "/usr/share/zoneinfo/${tz}" /etc/localtime
+  echo "$tz" > /etc/timezone
 }
 
 # ----------------------------------------------------------------------------
