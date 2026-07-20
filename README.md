@@ -23,12 +23,13 @@ any access to your host beyond the directory you launch it from.
 | `install-tools.sh` | **The seam for adding tools** — one function per tool |
 | `mcp-atlassian.json` | Atlassian remote MCP server definition |
 | `managed-settings.json` | Claude Code policy settings baked into the image |
-| `ccbox` | Launcher: `build` / `auth` / `auto` / `shell` / `help` / run |
+| `ccbox` | Launcher: `build` / `update` / `auth` / `auto` / `shell` / `help` / run |
 
 ## Quick start
 
 ```bash
 ./ccbox build          # build the image (add --no-cache for a clean rebuild)
+./ccbox update         # later: bump Claude Code only, no full rebuild
 ./ccbox auth           # one-time logins (see below)
 cd ~/your/project
 /path/to/ccbox          # launch Claude Code against this dir
@@ -71,6 +72,31 @@ claude                       # sign in to your subscription, then /exit
 `auth` also generates a **dedicated SSH key** in the volume and prints its
 public key — add that to GitHub / your git hosts. Add host aliases to
 `~/.ssh/config` inside the container as needed.
+
+## Updating Claude Code
+
+```bash
+ccbox update           # update to the latest release
+ccbox update 2.1.215   # or pin an exact version
+```
+
+Takes seconds, not a full rebuild. Claude Code is installed in the **last**
+image layer, keyed on a `CC_VERSION` build arg; `update` resolves the version
+you asked for and rebuilds from that layer onward, so everything above it —
+notably git built from source — is reused from the layer cache. If you're
+already on the target version the build arg is unchanged, the cache hits, and
+the command is a no-op.
+
+Claude Code's built-in updater does **not** work in this container, by design:
+npm's global dir is root-owned and the container runs as `node`, so a
+self-update fails with `no_permissions`. That's the tradeoff for keeping the
+agent non-root and the installed toolchain immutable — the version is a
+property of the image, so `ccbox update` is the way to move it.
+
+Note that a plain `ccbox build` will *not* pick up a new Claude Code release:
+the build arg still says `latest`, which is unchanged from the cache's point of
+view. Use `ccbox update` (or `ccbox build --no-cache`, which rebuilds
+everything, git included).
 
 ## Adding a tool
 

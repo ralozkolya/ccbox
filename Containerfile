@@ -16,7 +16,13 @@ COPY install-tools.sh /tmp/install-tools.sh
 RUN chmod +x /tmp/install-tools.sh && /tmp/install-tools.sh && rm /tmp/install-tools.sh
 
 # --- Claude Code ----------------------------------------------------------
-RUN npm install -g @anthropic-ai/claude-code
+# Deliberately the last expensive step, and keyed on CC_VERSION so `ccbox
+# update` can rebuild this layer alone (everything above it — including git
+# from source — stays cached). Claude Code cannot update itself here: npm's
+# global dir is root-owned and the container runs as node, so its in-app
+# updater fails with "no_permissions".
+ARG CC_VERSION=latest
+RUN npm install -g @anthropic-ai/claude-code@${CC_VERSION}
 
 # Managed (policy) settings — read from /etc/claude-code, which sits outside the
 # ccbox-home volume, so these defaults survive the mount and apply to every run,

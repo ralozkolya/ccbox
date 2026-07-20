@@ -3,6 +3,7 @@
 # ccbox — run Claude Code in a rootless podman container.
 #
 #   ccbox build          Build the image (pass --no-cache to bypass the cache).
+#   ccbox update         Update Claude Code only (no full rebuild).
 #   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
 #   ccbox [run]          Run Claude Code (default).
 #   ccbox auto           Run Claude Code in auto mode (--permission-mode auto).
@@ -61,6 +62,9 @@ ccbox — run Claude Code in a rootless podman container.
 Usage:
   ccbox build [args]   Build the image. Extra args pass to `podman build`,
                        e.g. `ccbox build --no-cache` to bypass the layer cache.
+  ccbox update [ver]   Update Claude Code to the latest release (or to [ver]).
+                       Rebuilds only the Claude Code layer — seconds, not a
+                       full image rebuild.
   ccbox auth           One-time logins (gh, gcloud, claude, MCP, SSH key).
   ccbox [run] [args]   Run Claude Code (default). Extra args pass to claude.
   ccbox auto [args]    Run Claude Code in auto mode (--permission-mode auto).
@@ -83,6 +87,32 @@ cmd_build() {
   # Extra args pass through to `podman build`, e.g. `ccbox build --no-cache`
   # to bypass the layer cache for a clean rebuild.
   podman build "$@" -t "$IMAGE" "$HERE"
+}
+
+# Update Claude Code without a full rebuild.
+#
+# Claude Code's own updater can't run here — npm's global dir is root-owned and
+# the container runs as node, so it fails with "no_permissions" and the image
+# stays pinned to whatever it was built with. Instead, resolve the wanted
+# version and pass it as CC_VERSION: only that RUN layer (and the trivial COPYs
+# after it) is invalidated, so the tools layer — git built from source — is
+# reused. Already on the latest? The build-arg is unchanged, the layer cache
+# hits, and this is a no-op.
+cmd_update() {
+  engine
+  local want="${1:-}"
+  if [ -z "$want" ]; then
+    echo "Resolving latest @anthropic-ai/claude-code ..."
+    want="$(podman run --rm "$IMAGE" npm view @anthropic-ai/claude-code version | tr -d '[:space:]')"
+  fi
+  case "$want" in
+    [0-9]*.[0-9]*.[0-9]*) ;;
+    *) echo "not a valid version: '$want'" >&2; exit 1 ;;
+  esac
+
+  echo "Building $IMAGE with Claude Code $want ..."
+  podman build --build-arg "CC_VERSION=$want" -t "$IMAGE" "$HERE"
+  podman run --rm "$IMAGE" claude --version
 }
 
 # First-run setup: drop into a shell with guidance, register the MCP server,
@@ -143,6 +173,7 @@ cmd_shell() {
 
 case "${1:-run}" in
   build)            shift; cmd_build "$@" ;;
+  update)           shift; cmd_update "$@" ;;
   auth)             shift; cmd_auth "$@" ;;
   auto)             shift; cmd_auto "$@" ;;
   shell)            shift; cmd_shell "$@" ;;
