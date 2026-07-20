@@ -55,6 +55,16 @@ run_flags() {
     -w /workspace
 }
 
+# Populate the global FLAGS array from run_flags. Portable stand-in for
+# `mapfile -t FLAGS < <(run_flags)`: macOS ships bash 3.2, which predates the
+# mapfile/readarray builtin, so that fails with "mapfile: command not found".
+load_flags() {
+  FLAGS=()
+  while IFS= read -r line; do
+    FLAGS+=("$line")
+  done < <(run_flags)
+}
+
 cmd_help() {
   cat <<'EOF'
 ccbox — run Claude Code in a rootless podman container.
@@ -119,7 +129,7 @@ cmd_update() {
 # and generate a dedicated SSH key inside the volume if missing.
 cmd_auth() {
   engine
-  mapfile -t FLAGS < <(run_flags)
+  load_flags
   podman run "${FLAGS[@]}" "$IMAGE" bash -lc '
     set -e
 
@@ -155,19 +165,19 @@ cmd_auth() {
 
 cmd_run() {
   engine
-  mapfile -t FLAGS < <(run_flags)
+  load_flags
   podman run "${FLAGS[@]}" "$IMAGE" claude "$@"
 }
 
 cmd_auto() {
   engine
-  mapfile -t FLAGS < <(run_flags)
+  load_flags
   podman run "${FLAGS[@]}" "$IMAGE" claude --permission-mode auto "$@"
 }
 
 cmd_shell() {
   engine
-  mapfile -t FLAGS < <(run_flags)
+  load_flags
   podman run "${FLAGS[@]}" "$IMAGE" bash -l
 }
 
