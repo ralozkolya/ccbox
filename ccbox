@@ -58,11 +58,18 @@ run_flags() {
   # the same tree (or a nested worktree) relabels it again, and the first
   # instance loses access to its own workspace. :z applies a shared label so
   # concurrent instances on the same repo can coexist.
+  # Not on macOS: virtiofs stores no SELinux xattrs, so the relabel walk is
+  # pure cost — on a large repo it pegs the VM until it stops responding.
+  local relabel=""
+  if [ "$(uname -s)" = Linux ] && [ -d /sys/fs/selinux ]; then
+    relabel=":z"
+  fi
+
   printf '%s\n' \
     --rm -it \
     --userns=keep-id:uid=1000,gid=1000 \
     --network "$NET" \
-    -v "$PWD":/workspace:z \
+    -v "$PWD":/workspace"$relabel" \
     -v "$VOLUME":/home/node \
     -w /workspace
 }
