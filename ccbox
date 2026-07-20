@@ -25,6 +25,18 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 engine() {
   command -v podman >/dev/null || { echo "podman not found" >&2; exit 1; }
+
+  # Rootful podman ignores --userns=keep-id, so the workspace keeps its host
+  # uid while the container runs as node: git sees "dubious ownership" on every
+  # repo under /workspace, and the mount isn't writable.
+  if [ "$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null)" = "false" ]; then
+    echo "ccbox: podman is running rootful; ccbox needs rootless." >&2
+    echo "Pick the non-root connection, e.g.:" >&2
+    echo "  podman system connection default podman-machine-default" >&2
+    echo "(check names with 'podman system connection list'; the root one ends" >&2
+    echo " in '-root'.) Images are per-connection, so re-run 'ccbox build'." >&2
+    exit 1
+  fi
 }
 
 # Shared run flags. Only $PWD crosses the host boundary; the home volume is
