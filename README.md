@@ -22,6 +22,7 @@ any access to your host beyond the directory you launch it from.
 | `Containerfile` | Image: Node 24 + Claude Code + base tools |
 | `install-tools.sh` | **The seam for adding tools** — one function per tool |
 | `mcp-atlassian.json` | Atlassian remote MCP server definition |
+| `managed-settings.json` | Claude Code policy settings baked into the image |
 | `ccbox` | Launcher: `build` / `auth` / `auto` / `shell` / `help` / run |
 
 ## Quick start
@@ -76,6 +77,25 @@ public key — add that to GitHub / your git hosts. Add host aliases to
 Edit `install-tools.sh`: add an `install_<name>` function and a call to it in
 the call list at the bottom, then `./ccbox build`. That's the only place to
 change.
+
+## Claude Code settings (baked into the image)
+
+Image-wide Claude Code defaults live in `managed-settings.json`, copied to
+`/etc/claude-code/managed-settings.json` at build time. That path is Claude
+Code's managed-policy location and sits **outside** the `ccbox-home` volume, so
+the defaults survive the volume mount and apply to every run — including a brand
+new volume. This is the same pattern as the container-wide `worktree.useRelativePaths`
+git default: an image-baked preference kept out of your home volume.
+
+Managed settings are enforced policy (highest precedence), so they can't be
+overridden per-user or per-project — reserve this file for defaults you always
+want on. Current contents:
+
+| Key | Value | Effect |
+|-----|-------|--------|
+| `respondToBashCommands` | `false` | After an input-box `!` command runs, its output is added to context **without** Claude responding to it. |
+
+To change a default, edit `managed-settings.json` and `./ccbox build`.
 
 ## Accessing your platform (db + services)
 

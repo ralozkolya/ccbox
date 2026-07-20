@@ -18,6 +18,12 @@ RUN chmod +x /tmp/install-tools.sh && /tmp/install-tools.sh && rm /tmp/install-t
 # --- Claude Code ----------------------------------------------------------
 RUN npm install -g @anthropic-ai/claude-code
 
+# Managed (policy) settings — read from /etc/claude-code, which sits outside the
+# ccbox-home volume, so these defaults survive the mount and apply to every run,
+# including a fresh volume. Currently: respondToBashCommands=false, so input-box
+# `!` command output is added to context without Claude responding to it.
+COPY managed-settings.json /etc/claude-code/managed-settings.json
+
 # --- non-root runtime user ------------------------------------------------
 # Run as the base image's built-in "node" user (uid 1000, home /home/node).
 # Matching uid 1000 lets plain `--userns=keep-id` map it to the host user, so
