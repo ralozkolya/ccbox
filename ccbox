@@ -152,10 +152,9 @@ cmd_auth() {
   podman run "${FLAGS[@]}" "$IMAGE" bash -lc '
     set -e
 
-    # Register the Atlassian remote MCP server (idempotent).
-    if ! claude mcp list 2>/dev/null | grep -q "^atlassian"; then
-      claude mcp add-json --scope user atlassian "$(cat /etc/ccbox/mcp-atlassian.json)" || true
-    fi
+    # Re-register the Atlassian MCP server so stale definitions get replaced.
+    claude mcp remove atlassian >/dev/null 2>&1 || true
+    claude mcp add-json --scope user atlassian "$(cat /etc/ccbox/mcp-atlassian.json)" || true
 
     # Dedicated SSH key in the persisted volume — host ~/.ssh is never used.
     mkdir -p ~/.ssh && chmod 700 ~/.ssh
